@@ -1,9 +1,10 @@
 import streamlit as st
 
 st.title("CBSE Class 10 Social Science Board Revision Quiz")
+st.write("Select your options for each section, then click **Submit Entire Quiz** at the bottom to calculate your total score!")
 
-# Question Bank
-questions = [
+# --- QUESTION BANK STRUCTURED BY SUBJECT ---
+history_questions = [
     {
         "q": "Which treaty recognized Greece as an independent nation in 1832?",
         "options": ["(A) Treaty of Versailles", "(B) Treaty of Constantinople", "(C) Treaty of Vienna", "(D) Treaty of Lausanne"],
@@ -27,7 +28,10 @@ questions = [
         "options": ["(A) Discovery of India", "(B) Anandamath", "(C) Poverty and Un-British Rule in India", "(D) Hind Swaraj"],
         "ans": "(D)",
         "exp": "Hind Swaraj was written by Mahatma Gandhi in 1909."
-    },
+    }
+]
+
+geography_questions = [
     {
         "q": "In which year was the Earth Summit held in Rio de Janeiro?",
         "options": ["(A) 1990", "(B) 1992", "(C) 1997", "(D) 2002"],
@@ -66,18 +70,65 @@ questions = [
     }
 ]
 
-# Display Questions using Loop
-for idx, item in enumerate(questions):
-    st.subheader(f"Question {idx + 1}")
-    st.write(item["q"])
+# --- FORM & SUBJECT TABS ---
+user_responses = {}
+
+with st.form("sst_quiz_form"):
+    tab1, tab2 = st.tabs(["📜 History", "🌍 Geography"])
+
+    # History Tab Content
+    with tab1:
+        st.header("History Section")
+        for idx, item in enumerate(history_questions):
+            st.subheader(f"Q{idx + 1}. {item['q']}")
+            user_responses[f"hist_{idx}"] = st.radio(
+                "Select option:", 
+                item["options"], 
+                key=f"hist_radio_{idx}"
+            )
+            st.divider()
+
+    # Geography Tab Content
+    with tab2:
+        st.header("Geography Section")
+        for idx, item in enumerate(geography_questions):
+            st.subheader(f"Q{idx + 1}. {item['q']}")
+            user_responses[f"geo_{idx}"] = st.radio(
+                "Select option:", 
+                item["options"], 
+                key=f"geo_radio_{idx}"
+            )
+            st.divider()
+
+    # Submit Button for the entire quiz
+    submitted = st.form_submit_button("Submit Entire Quiz 🚀")
+
+# --- RESULTS & SCORE CALCULATION ---
+if submitted:
+    total_score = 0
+    total_questions = len(history_questions) + len(geography_questions)
+
+    # Calculate History Score
+    for idx, item in enumerate(history_questions):
+        if item["ans"] in user_responses.get(f"hist_{idx}", ""):
+            total_score += 1
+
+    # Calculate Geography Score
+    for idx, item in enumerate(geography_questions):
+        if item["ans"] in user_responses.get(f"geo_{idx}", ""):
+            total_score += 1
+
+    # Display Final Score Card
+    st.balloons()
+    st.header("🏆 Final Quiz Scorecard")
+    percentage = (total_score / total_questions) * 100
     
-    # Key parameter prevents Streamlit duplicate errors
-    choice = st.radio("Select your option:", item["options"], key=f"radio_{idx}")
-    
-    if st.button("Submit Answer", key=f"btn_{idx}"):
-        if item["ans"] in choice:
-            st.success(f"You are correct! 🎉 {item['exp']}")
-        else:
-            st.error("It is wrong. Try harder next time! 💡")
-    st.divider()
-  
+    st.metric(label="Total Marks Obtained", value=f"{total_score} / {total_questions}", delta=f"{percentage:.1f}% Score")
+
+    if percentage >= 80:
+        st.success("🎉 Excellent! Your preparation for CBSE Class 10 SST is on track for a top score!")
+    elif percentage >= 50:
+        st.warning("👍 Good effort! Review the chapters you missed to strengthen your concepts.")
+    else:
+        st.error("💡 Keep practicing! Go through your NCERT textbook once more and re-attempt the quiz.")
+                

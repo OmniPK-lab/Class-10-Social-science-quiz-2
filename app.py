@@ -139,4 +139,25 @@ if submitted:
     if percentage >= 80:
         st.success("🎉 Outstanding Performance! You are board-exam ready!")
     elif percentage >= 50:
-        st.warning("👍 Good Attemp
+        st.warning("👍 Good Attemp! Go through the answer key below to review weak topics.")
+    else:
+        st.error("💡 Needs Improvement! Check the detailed answers below and revise NCERT chapters.")
+
+    st.divider()
+
+    # DETAILED ANSWER KEY SECTION
+    st.header("🔑 Detailed Answer Key & Explanations")
+
+    answer_tabs = st.tabs([f"Answers: {title}" for _, _, title in all_sections])
+
+    for i, (questions, prefix, title) in enumerate(all_sections):
+        with answer_tabs[i]:
+            st.write(f"### {title} Review")
+            for idx, item in enumerate(questions):
+                user_choice = user_responses.get(f"{prefix}_{idx}", "")
+                is_correct = item["ans"] in user_choice
+
+                with st.expander(f"Q{idx + 1}: {item['q']} - {'✅ Correct' if is_correct else '❌ Incorrect'}"):
+                    st.write(f"**Your Selected Answer:** {user_choice}")
+                    st.write(f"**Correct Answer:** {item['ans']}")
+                    st.info(f"**Explanation:** {item['exp']}")

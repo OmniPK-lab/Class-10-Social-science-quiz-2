@@ -1,0 +1,1 @@
+# Class-10-Social-science-quiz-2

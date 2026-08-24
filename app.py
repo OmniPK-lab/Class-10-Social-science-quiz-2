@@ -13,12 +13,16 @@ st.set_page_config(page_title="CBSE Class 10 SST Quiz", layout="wide")
 # ==========================================
 # SESSION STATE INITIALIZATION
 # ==========================================
+if "quiz_started" not in st.session_state:
+    st.session_state.quiz_started = False
 if "quiz_submitted" not in st.session_state:
     st.session_state.quiz_submitted = False
 if "balloons_shown" not in st.session_state:
     st.session_state.balloons_shown = False
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
+if "user_answers" not in st.session_state:
+    st.session_state.user_answers = {}
 
 # ==========================================
 # SIDEBAR: TIMER & CONFIGURATION OPTIONS
@@ -27,7 +31,8 @@ if "start_time" not in st.session_state:
 st.sidebar.header("⏱️ Quiz Mode & Timer")
 timer_mode = st.sidebar.radio(
     "Choose Quiz Mode:",
-    ["Without Timer (Practice Mode)", "With Timer (Exam Mode)"]
+    ["Without Timer (Practice Mode)", "With Timer (Exam Mode)"],
+    disabled=st.session_state.quiz_started
 )
 
 time_limit_sec = 0
@@ -37,28 +42,24 @@ if timer_mode == "With Timer (Exam Mode)":
         min_value=1,
         max_value=180,
         value=30,
-        step=1
+        step=1,
+        disabled=st.session_state.quiz_started
     )
     time_limit_sec = time_limit_min * 60
 
-    # Initialize start time if not set yet
-    if st.session_state.start_time is None:
-        st.session_state.start_time = time.time()
-
-    # Auto-refresh every 1000ms (1 second) to continuously update timer
-    if HAS_AUTOREFRESH and not st.session_state.quiz_submitted:
+    # Auto-refresh every 1000ms (1 second) when quiz is running
+    if HAS_AUTOREFRESH and st.session_state.quiz_started and not st.session_state.quiz_submitted:
         st_autorefresh(interval=1000, key="quiz_timer_refresh")
-else:
-    st.session_state.start_time = None
 
-# Reset timer / restart button in sidebar
-if st.sidebar.button("Restart / Reset Quiz Timer"):
-    st.session_state.start_time = time.time()
+# Reset / Restart Quiz Button
+if st.sidebar.button("🔄 Restart / Reset Quiz"):
+    st.session_state.quiz_started = False
     st.session_state.quiz_submitted = False
     st.session_state.balloons_shown = False
+    st.session_state.start_time = None
+    st.session_state.user_answers = {}
     st.rerun()
 
-# Placeholders for sidebar timer display
 sidebar_timer_placeholder = st.sidebar.empty()
 
 # ==========================================
@@ -70,42 +71,41 @@ col_title, col_timer = st.columns([3, 1])
 with col_title:
     st.title("CBSE Class 10 Social Science Board Revision Quiz")
 
-# Placeholders for main screen timer display (top right corner)
 main_timer_placeholder = col_timer.empty()
 warning_banner_placeholder = st.empty()
 
-# Calculate and render countdown in both places simultaneously
+# Timer Logic & Execution
 auto_submit = False
-if timer_mode == "With Timer (Exam Mode)" and st.session_state.start_time is not None:
-    elapsed_time = int(time.time() - st.session_state.start_time)
-    remaining_time = time_limit_sec - elapsed_time
+if timer_mode == "With Timer (Exam Mode)":
+    if not st.session_state.quiz_started:
+        sidebar_timer_placeholder.info("⏳ Waiting for you to start the test.")
+        main_timer_placeholder.info("⏳ Press Start Test below")
+    elif st.session_state.quiz_started and not st.session_state.quiz_submitted:
+        elapsed_time = int(time.time() - st.session_state.start_time)
+        remaining_time = time_limit_sec - elapsed_time
 
-    if remaining_time > 0:
-        mins, secs = divmod(remaining_time, 60)
-        time_text = f"⏳ **Time Left:** {mins:02d}:{secs:02d}"
+        if remaining_time > 0:
+            mins, secs = divmod(remaining_time, 60)
+            time_text = f"⏳ **Time Left:** {mins:02d}:{secs:02d}"
 
-        # 1-MINUTE WARNING CHECK
-        if remaining_time <= 60 and not st.session_state.quiz_submitted:
-            warning_banner_placeholder.error("⚠️ **LAST MINUTE WARNING:** Less than 1 minute remaining! Please finalize your answers.")
-            sidebar_timer_placeholder.error(time_text)
-            main_timer_placeholder.error(time_text)
+            if remaining_time <= 60:
+                warning_banner_placeholder.error("⚠️ **LAST MINUTE WARNING:** Less than 1 minute remaining!")
+                sidebar_timer_placeholder.error(time_text)
+                main_timer_placeholder.error(time_text)
+            else:
+                sidebar_timer_placeholder.warning(time_text)
+                main_timer_placeholder.warning(time_text)
         else:
-            sidebar_timer_placeholder.warning(time_text)
-            main_timer_placeholder.warning(time_text)
-    else:
-        time_up_text = "🚨 **Time's Up!** Submitting exam..."
-        sidebar_timer_placeholder.error(time_up_text)
-        main_timer_placeholder.error(time_up_text)
-        auto_submit = True
-        st.session_state.quiz_submitted = True
+            sidebar_timer_placeholder.error("🚨 **Time's Up!**")
+            main_timer_placeholder.error("🚨 **Time's Up!**")
+            st.session_state.quiz_submitted = True
+            st.rerun() # Force instant refresh to lock form and load results
 else:
     sidebar_timer_placeholder.info("ℹ️ Practice Mode active.")
     main_timer_placeholder.info("ℹ️ No time limit")
 
-st.write("Select your options across all 4 subjects, then click **Submit Entire Quiz** at the bottom to view your detailed score and answer key!")
-
 # ==========================================
-# QUESTION BANK (60 QUESTIONS - CLEANED OPTIONS)
+# QUESTION BANK (60 QUESTIONS)
 # ==========================================
 
 history_questions = [
@@ -173,16 +173,12 @@ economics_questions = [
     {"q": "Money or asset pledged as a guarantee to a lender until the loan is repaid is called:", "options": ["(A) Credit", "(B) Deposit", "(C) Collateral", "(D) Interest"], "ans": "(C)", "exp": "Collateral is an asset that the borrower owns and pledges to the lender."},
     {"q": "In which sector are workers provided job security, medical benefits, and fixed working hours?", "options": ["(A) Unorganized Sector", "(B) Organized Sector", "(C) Informal Sector", "(D) Primary Sector"], "ans": "(B)", "exp": "The Organized sector covers enterprises with registered, secure employment."},
     {"q": "Per Capita Income is calculated by dividing National Income by the country's:", "options": ["(A) Total Area", "(B) Total Population", "(C) Total Working Population", "(D) Total Exports"], "ans": "(B)", "exp": "Per Capita Income = Total Income of Country / Total Population."},
-   {"q": "Which sector has emerged as the largest producing sector in India in recent decades?", "options": ["(A) Primary Sector", "(B) Secondary Sector", "(C) Tertiary (Service) Sector", "(D) Agricultural Sector"], "ans": "(C)", "exp": "The Tertiary (Service) sector has become the largest contributor to India's GDP."},
+    {"q": "Which sector has emerged as the largest producing sector in India in recent decades?", "options": ["(A) Primary Sector", "(B) Secondary Sector", "(C) Tertiary (Service) Sector", "(D) Agricultural Sector"], "ans": "(C)", "exp": "The Tertiary (Service) sector has become the largest contributor to India's GDP."},
     {"q": "Removing barriers or restrictions set by the government on international trade is known as:", "options": ["(A) Globalization", "(B) Liberalization", "(C) Privatization", "(D) Industrialization"], "ans": "(B)", "exp": "Removing trade barriers or restrictions is called Liberalization."},
     {"q": "MNCs stand for:", "options": ["(A) Multi-National Corporations", "(B) Multi-National Companies", "(C) Multi-National Centers", "(D) Multi-National Councils"], "ans": "(A)", "exp": "MNCs are Multinational Corporations that own or control production in more than one nation."},
     {"q": "Which agency sets quality standards for food items in India like ISI or Agmark?", "options": ["(A) Consumer Forum", "(B) Bureau of Indian Standards (BIS)", "(C) NITI Aayog", "(D) FCI"], "ans": "(B)", "exp": "BIS issues quality certification standards (like ISI mark and Agmark)."},
     {"q": "Self-Help Groups (SHGs) usually consist of how many members, typically women from neighboring areas?", "options": ["(A) 5 to 10", "(B) 15 to 20", "(C) 50 to 100", "(D) 100 to 200"], "ans": "(B)", "exp": "A typical SHG has 15-20 members who meet and save regularly."}
 ]
-
-# ==========================================
-# APP LAYOUT AND QUIZ FORM
-# ==========================================
 
 all_sections = [
     (history_questions, "hist", "📜 History"),
@@ -191,36 +187,55 @@ all_sections = [
     (economics_questions, "eco", "📈 Economics")
 ]
 
-user_responses = {}
-
-with st.form("sst_quiz_form"):
-    tabs = st.tabs([title for _, _, title in all_sections])
-
-    for i, (questions, prefix, title) in enumerate(all_sections):
-        with tabs[i]:
-            st.header(f"{title} Section ({len(questions)} Questions)")
-            for idx, item in enumerate(questions):
-                st.subheader(f"Q{idx + 1}. {item['q']}")
-                user_responses[f"{prefix}_{idx}"] = st.radio(
-                    label=f"q_{prefix}_{idx}",
-                    options=item["options"],
-                    key=f"{prefix}_radio_{idx}",
-                    index=None,
-                    label_visibility="collapsed"
-                )
-                st.divider()
-
-    submitted = st.form_submit_button("Submit Entire Quiz 🚀")
-
-# Update state if manually submitted
-if submitted:
-    st.session_state.quiz_submitted = True
-
 # ==========================================
-# SCORECARD & DETAILED ANSWER KEY
+# TEST START SCREEN & QUESTION FORM
 # ==========================================
 
-if st.session_state.quiz_submitted or auto_submit:
+if not st.session_state.quiz_started and not st.session_state.quiz_submitted:
+    st.info("📌 **Instructions:** Select your desired mode in the sidebar, then click **Start Test Now** below to begin.")
+    if st.button("🚀 Start Test Now", type="primary", use_container_width=True):
+        st.session_state.quiz_started = True
+        st.session_state.start_time = time.time()
+        st.rerun()
+
+elif st.session_state.quiz_started and not st.session_state.quiz_submitted:
+    st.write("Select your options across all 4 subjects, then click **Submit Entire Quiz** at the bottom!")
+
+    with st.form("sst_quiz_form"):
+        tabs = st.tabs([title for _, _, title in all_sections])
+
+        for i, (questions, prefix, title) in enumerate(all_sections):
+            with tabs[i]:
+                st.header(f"{title} Section ({len(questions)} Questions)")
+                for idx, item in enumerate(questions):
+                    st.subheader(f"Q{idx + 1}. {item['q']}")
+                    
+                    key_name = f"{prefix}_{idx}"
+                    val = st.radio(
+                        label=f"q_{prefix}_{idx}",
+                        options=item["options"],
+                        key=f"{prefix}_radio_{idx}",
+                        index=None,
+                        label_visibility="collapsed"
+                    )
+                    st.session_state.user_answers[key_name] = val
+                    st.divider()
+
+        submitted = st.form_submit_button("Submit Entire Quiz 🚀")
+        if submitted:
+            st.session_state.quiz_submitted = True
+            st.rerun()
+
+# ==========================================
+# RESULTS & DETAILED ANSWER KEY (POST-SUBMISSION)
+# ==========================================
+
+if st.session_state.quiz_submitted:
+    # Trigger balloons ONCE upon submission
+    if not st.session_state.balloons_shown:
+        st.balloons()
+        st.session_state.balloons_shown = True
+
     total_score = 0
     total_questions = sum(len(q_list) for q_list, _, _ in all_sections)
     section_scores = {}
@@ -228,16 +243,11 @@ if st.session_state.quiz_submitted or auto_submit:
     for questions, prefix, title in all_sections:
         sec_score = 0
         for idx, item in enumerate(questions):
-            user_choice = user_responses.get(f"{prefix}_{idx}")
+            user_choice = st.session_state.user_answers.get(f"{prefix}_{idx}")
             if user_choice and item["ans"] in user_choice:
                 sec_score += 1
         section_scores[title] = (sec_score, len(questions))
         total_score += sec_score
-
-    # Trigger balloons ONCE only
-    if not st.session_state.balloons_shown:
-        st.balloons()
-        st.session_state.balloons_shown = True
 
     st.header("🏆 Final Quiz Scorecard")
     percentage = (total_score / total_questions) * 100
@@ -267,7 +277,7 @@ if st.session_state.quiz_submitted or auto_submit:
         with answer_tabs[i]:
             st.write(f"### {title} Review")
             for idx, item in enumerate(questions):
-                user_choice = user_responses.get(f"{prefix}_{idx}")
+                user_choice = st.session_state.user_answers.get(f"{prefix}_{idx}")
                 
                 if not user_choice:
                     display_choice = "⚠️ Left Unattempted"

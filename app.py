@@ -1,9 +1,16 @@
 import streamlit as st
 import time
 
+# Install via requirements.txt: streamlit-autorun
+try:
+    from streamlit_autorun import autorefresh
+    HAS_AUTOREFRESH = True
+except ImportError:
+    HAS_AUTOREFRESH = False
+
 st.set_page_config(page_title="CBSE Class 10 SST Quiz", layout="wide")
 st.title("CBSE Class 10 Social Science Board Revision Quiz")
- 
+
 # ==========================================
 # SIDEBAR: TIMER & CONFIGURATION OPTIONS
 # ==========================================
@@ -25,13 +32,23 @@ if timer_mode == "With Timer (Exam Mode)":
     )
     time_limit_sec = time_limit_min * 60
 
+    # Auto-refresh the page every 1 second (1000ms) to update the countdown continuously
+    if HAS_AUTOREFRESH:
+        autorefresh(interval=1000, key="quiz_timer_refresh")
+
 # Initialize Session State for Start Time
 if "start_time" not in st.session_state:
     st.session_state.start_time = time.time()
 
+# Reset timer button in sidebar
+if st.sidebar.button("Restart / Reset Quiz Timer"):
+    st.session_state.start_time = time.time()
+    st.rerun()
+
 st.write("Select your options across all 4 subjects, then click **Submit Entire Quiz** at the bottom to view your detailed score and answer key!")
 
 # Real-time Countdown Display
+auto_submit = False
 if timer_mode == "With Timer (Exam Mode)":
     elapsed_time = int(time.time() - st.session_state.start_time)
     remaining_time = time_limit_sec - elapsed_time
@@ -40,7 +57,8 @@ if timer_mode == "With Timer (Exam Mode)":
         mins, secs = divmod(remaining_time, 60)
         st.sidebar.warning(f"⏳ **Time Remaining:** {mins:02d}:{secs:02d}")
     else:
-        st.sidebar.error("🚨 **Time's Up! Your quiz is auto-submitting.**")
+        st.sidebar.error("🚨 **Time's Up! Your quiz has ended.**")
+        auto_submit = True
 
 # ==========================================
 # QUESTION BANK (60 QUESTIONS)
@@ -118,7 +136,7 @@ economics_questions = [
     {"q": "Self-Help Groups (SHGs) usually consist of how many members, typically women from neighboring areas?", "options": ["Select an option...", "(A) 5 to 10", "(B) 15 to 20", "(C) 50 to 100", "(D) 100 to 200"], "ans": "(B)", "exp": "A typical SHG has 15-20 members who meet and save regularly."}
 ]
 
-# ==========================================
+# =========================================
 # APP LAYOUT AND QUIZ FORM
 # ==========================================
 
@@ -146,13 +164,6 @@ with st.form("sst_quiz_form"):
 
     submitted = st.form_submit_button("Submit Entire Quiz 🚀")
 
-# Auto-submit trigger when timer runs out
-auto_submit = False
-if timer_mode == "With Timer (Exam Mode)":
-    elapsed_time = int(time.time() - st.session_state.start_time)
-    if elapsed_time >= time_limit_sec:
-        auto_submit = True
-
 # ==========================================
 # SCORECARD & DETAILED ANSWER KEY
 # ==========================================
@@ -166,7 +177,6 @@ if submitted or auto_submit:
         sec_score = 0
         for idx, item in enumerate(questions):
             user_choice = user_responses.get(f"{prefix}_{idx}", "")
-            # Only award mark if an option was selected AND it is correct
             if user_choice != "Select an option..." and item["ans"] in user_choice:
                 sec_score += 1
         section_scores[title] = (sec_score, len(questions))
@@ -213,3 +223,4 @@ if submitted or auto_submit:
                     st.write(f"**Your Selected Answer:** {user_choice}")
                     st.write(f"**Correct Answer:** {item['ans']}")
                     st.info(f"**Explanation:** {item['exp']}")
+

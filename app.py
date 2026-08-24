@@ -3,7 +3,7 @@ import time
 
 st.set_page_config(page_title="CBSE Class 10 SST Quiz", layout="wide")
 st.title("CBSE Class 10 Social Science Board Revision Quiz")
-
+ 
 # ==========================================
 # SIDEBAR: TIMER & CONFIGURATION OPTIONS
 # ==========================================

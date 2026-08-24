@@ -21,8 +21,6 @@ if "balloons_shown" not in st.session_state:
     st.session_state.balloons_shown = False
 if "start_time" not in st.session_state:
     st.session_state.start_time = None
-if "user_answers" not in st.session_state:
-    st.session_state.user_answers = {}
 
 # ==========================================
 # SIDEBAR: TIMER & CONFIGURATION OPTIONS
@@ -53,11 +51,8 @@ if timer_mode == "With Timer (Exam Mode)":
 
 # Reset / Restart Quiz Button
 if st.sidebar.button("🔄 Restart / Reset Quiz"):
-    st.session_state.quiz_started = False
-    st.session_state.quiz_submitted = False
-    st.session_state.balloons_shown = False
-    st.session_state.start_time = None
-    st.session_state.user_answers = {}
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
     st.rerun()
 
 sidebar_timer_placeholder = st.sidebar.empty()
@@ -75,7 +70,6 @@ main_timer_placeholder = col_timer.empty()
 warning_banner_placeholder = st.empty()
 
 # Timer Logic & Execution
-auto_submit = False
 if timer_mode == "With Timer (Exam Mode)":
     if not st.session_state.quiz_started:
         sidebar_timer_placeholder.info("⏳ Waiting for you to start the test.")
@@ -99,7 +93,7 @@ if timer_mode == "With Timer (Exam Mode)":
             sidebar_timer_placeholder.error("🚨 **Time's Up!**")
             main_timer_placeholder.error("🚨 **Time's Up!**")
             st.session_state.quiz_submitted = True
-            st.rerun() # Force instant refresh to lock form and load results
+            st.rerun() # Force instant refresh to lock form and render post-test scorecard
 else:
     sidebar_timer_placeholder.info("ℹ️ Practice Mode active.")
     main_timer_placeholder.info("ℹ️ No time limit")
@@ -187,6 +181,13 @@ all_sections = [
     (economics_questions, "eco", "📈 Economics")
 ]
 
+# Initialize state keys for all question options
+for questions, prefix, _ in all_sections:
+    for idx in range(len(questions)):
+        key_name = f"ans_{prefix}_{idx}"
+        if key_name not in st.session_state:
+            st.session_state[key_name] = None
+
 # ==========================================
 # TEST START SCREEN & QUESTION FORM
 # ==========================================
@@ -210,15 +211,14 @@ elif st.session_state.quiz_started and not st.session_state.quiz_submitted:
                 for idx, item in enumerate(questions):
                     st.subheader(f"Q{idx + 1}. {item['q']}")
                     
-                    key_name = f"{prefix}_{idx}"
-                    val = st.radio(
+                    key_name = f"ans_{prefix}_{idx}"
+                    st.radio(
                         label=f"q_{prefix}_{idx}",
                         options=item["options"],
-                        key=f"{prefix}_radio_{idx}",
+                        key=key_name,
                         index=None,
                         label_visibility="collapsed"
                     )
-                    st.session_state.user_answers[key_name] = val
                     st.divider()
 
         submitted = st.form_submit_button("Submit Entire Quiz 🚀")
@@ -236,25 +236,40 @@ if st.session_state.quiz_submitted:
         st.balloons()
         st.session_state.balloons_shown = True
 
-    total_score = 0
+    total_correct = 0
+    total_incorrect = 0
+    total_unattempted = 0
     total_questions = sum(len(q_list) for q_list, _, _ in all_sections)
     section_scores = {}
 
     for questions, prefix, title in all_sections:
         sec_score = 0
         for idx, item in enumerate(questions):
-            user_choice = st.session_state.user_answers.get(f"{prefix}_{idx}")
-            if user_choice and item["ans"] in user_choice:
+            user_choice = st.session_state.get(f"ans_{prefix}_{idx}")
+            if user_choice is None:
+                total_unattempted += 1
+            elif item["ans"] in user_choice:
                 sec_score += 1
+                total_correct += 1
+            else:
+                total_incorrect += 1
+
         section_scores[title] = (sec_score, len(questions))
-        total_score += sec_score
 
     st.header("🏆 Final Quiz Scorecard")
-    percentage = (total_score / total_questions) * 100
-    st.metric(label="Overall Marks Obtained", value=f"{total_score} / {total_questions}", delta=f"{percentage:.1f}% Score")
+    percentage = (total_correct / total_questions) * 100
+
+    # TOP OVERALL SCORE METRICS
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric(label="Total Score", value=f"{total_correct} / {total_questions}", delta=f"{percentage:.1f}%")
+    m2.metric(label="✅ Correctly Attempted", value=f"{total_correct}")
+    m3.metric(label="❌ Incorrectly Attempted", value=f"{total_incorrect}")
+    m4.metric(label="⚠️ Left Unattended", value=f"{total_unattempted}")
+
+    st.divider()
 
     # SECTION BREAKDOWN METRICS
-    st.write("### 📊 Marks Breakdown by Subject")
+    st.write("### 📊 Subject-Wise Marks Breakdown")
     cols = st.columns(4)
     for idx, (title, (score, total)) in enumerate(section_scores.items()):
         cols[idx].metric(label=title, value=f"{score} / {total}")
@@ -277,16 +292,19 @@ if st.session_state.quiz_submitted:
         with answer_tabs[i]:
             st.write(f"### {title} Review")
             for idx, item in enumerate(questions):
-                user_choice = st.session_state.user_answers.get(f"{prefix}_{idx}")
+                user_choice = st.session_state.get(f"ans_{prefix}_{idx}")
                 
-                if not user_choice:
-                    display_choice = "⚠️ Left Unattempted"
-                    is_correct = False
-                else:
+                if user_choice is None:
+                    status_str = "⚠️ Left Unattended"
+                    display_choice = "None Selected"
+                elif item["ans"] in user_choice:
+                    status_str = "✅ Correct"
                     display_choice = user_choice
-                    is_correct = item["ans"] in user_choice
+                else:
+                    status_str = "❌ Incorrect"
+                    display_choice = user_choice
 
-                with st.expander(f"Q{idx + 1}: {item['q']} - {'✅ Correct' if is_correct else '❌ Incorrect'}"):
+                with st.expander(f"Q{idx + 1}: {item['q']} - {status_str}"):
                     st.write(f"**Your Selected Answer:** {display_choice}")
                     st.write(f"**Correct Answer:** {item['ans']}")
                     st.info(f"**Explanation:** {item['exp']}")

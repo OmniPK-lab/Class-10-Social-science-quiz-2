@@ -1,15 +1,3 @@
-None selected 
-
-Skip to content
-Using Gmail with screen readers
-1 of 83
-Code.txt3
-Inbox
-
-Aadi Kumar <aadi.cutelu@gmail.com>
-01:23 (0 minutes ago)
-to me
-
 import streamlit as st
 import time
 

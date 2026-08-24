@@ -1,15 +1,26 @@
+None selected 
+
+Skip to content
+Using Gmail with screen readers
+1 of 83
+Code.txt3
+Inbox
+
+Aadi Kumar <aadi.cutelu@gmail.com>
+01:23 (0 minutes ago)
+to me
+
 import streamlit as st
 import time
 
-# Install via requirements.txt: streamlit-autorun
+# Import auto-refresh component
 try:
-    from streamlit_autorun import autorefresh
+    from streamlit_autorefresh import st_autorefresh
     HAS_AUTOREFRESH = True
 except ImportError:
     HAS_AUTOREFRESH = False
 
 st.set_page_config(page_title="CBSE Class 10 SST Quiz", layout="wide")
-st.title("CBSE Class 10 Social Science Board Revision Quiz")
 
 # ==========================================
 # SIDEBAR: TIMER & CONFIGURATION OPTIONS
@@ -32,9 +43,9 @@ if timer_mode == "With Timer (Exam Mode)":
     )
     time_limit_sec = time_limit_min * 60
 
-    # Auto-refresh the page every 1 second (1000ms) to update the countdown continuously
+    # Auto-refresh every 1000ms (1 second) to continuously update timer
     if HAS_AUTOREFRESH:
-        autorefresh(interval=1000, key="quiz_timer_refresh")
+        st_autorefresh(interval=1000, key="quiz_timer_refresh")
 
 # Initialize Session State for Start Time
 if "start_time" not in st.session_state:
@@ -45,9 +56,23 @@ if st.sidebar.button("Restart / Reset Quiz Timer"):
     st.session_state.start_time = time.time()
     st.rerun()
 
-st.write("Select your options across all 4 subjects, then click **Submit Entire Quiz** at the bottom to view your detailed score and answer key!")
+# Placeholders for sidebar timer display
+sidebar_timer_placeholder = st.sidebar.empty()
 
-# Real-time Countdown Display
+# ==========================================
+# MAIN HEADER & DUAL TIMER DISPLAY
+# ==========================================
+
+# Use columns to position the main screen timer at the top-right corner
+col_title, col_timer = st.columns([3, 1])
+
+with col_title:
+    st.title("CBSE Class 10 Social Science Board Revision Quiz")
+
+# Placeholders for main screen timer display (top right corner)
+main_timer_placeholder = col_timer.empty()
+
+# Calculate and render countdown in both places simultaneously
 auto_submit = False
 if timer_mode == "With Timer (Exam Mode)":
     elapsed_time = int(time.time() - st.session_state.start_time)
@@ -55,10 +80,22 @@ if timer_mode == "With Timer (Exam Mode)":
 
     if remaining_time > 0:
         mins, secs = divmod(remaining_time, 60)
-        st.sidebar.warning(f"⏳ **Time Remaining:** {mins:02d}:{secs:02d}")
+        time_text = f"⏳ **Time Left:** {mins:02d}:{secs:02d}"
+        
+        # Update Sidebar Timer
+        sidebar_timer_placeholder.warning(time_text)
+        # Update Main Screen Top-Right Corner Timer
+        main_timer_placeholder.warning(time_text)
     else:
-        st.sidebar.error("🚨 **Time's Up! Your quiz has ended.**")
+        time_up_text = "🚨 **Time's Up!**"
+        sidebar_timer_placeholder.error(time_up_text)
+        main_timer_placeholder.error(time_up_text)
         auto_submit = True
+else:
+    sidebar_timer_placeholder.info("ℹ️ Practice Mode active.")
+    main_timer_placeholder.info("ℹ️ No time limit")
+
+st.write("Select your options across all 4 subjects, then click **Submit Entire Quiz** at the bottom to view your detailed score and answer key!")
 
 # ==========================================
 # QUESTION BANK (60 QUESTIONS)
@@ -135,8 +172,7 @@ economics_questions = [
     {"q": "Which agency sets quality standards for food items in India like ISI or Agmark?", "options": ["Select an option...", "(A) Consumer Forum", "(B) Bureau of Indian Standards (BIS)", "(C) NITI Aayog", "(D) FCI"], "ans": "(B)", "exp": "BIS issues quality certification standards (like ISI mark and Agmark)."},
     {"q": "Self-Help Groups (SHGs) usually consist of how many members, typically women from neighboring areas?", "options": ["Select an option...", "(A) 5 to 10", "(B) 15 to 20", "(C) 50 to 100", "(D) 100 to 200"], "ans": "(B)", "exp": "A typical SHG has 15-20 members who meet and save regularly."}
 ]
-
-# =========================================
+# ==========================================
 # APP LAYOUT AND QUIZ FORM
 # ==========================================
 
@@ -223,4 +259,3 @@ if submitted or auto_submit:
                     st.write(f"**Your Selected Answer:** {user_choice}")
                     st.write(f"**Correct Answer:** {item['ans']}")
                     st.info(f"**Explanation:** {item['exp']}")
-

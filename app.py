@@ -93,7 +93,7 @@ if timer_mode == "With Timer (Exam Mode)":
             sidebar_timer_placeholder.error("🚨 **Time's Up!**")
             main_timer_placeholder.error("🚨 **Time's Up!**")
             st.session_state.quiz_submitted = True
-            st.rerun() # Force instant refresh to lock form and render post-test scorecard
+            st.rerun()
 else:
     sidebar_timer_placeholder.info("ℹ️ Practice Mode active.")
     main_timer_placeholder.info("ℹ️ No time limit")
@@ -189,7 +189,7 @@ for questions, prefix, _ in all_sections:
             st.session_state[key_name] = None
 
 # ==========================================
-# TEST START SCREEN & QUESTION FORM
+# TEST START SCREEN & QUESTIONS DISPLAY
 # ==========================================
 
 if not st.session_state.quiz_started and not st.session_state.quiz_submitted:
@@ -202,29 +202,27 @@ if not st.session_state.quiz_started and not st.session_state.quiz_submitted:
 elif st.session_state.quiz_started and not st.session_state.quiz_submitted:
     st.write("Select your options across all 4 subjects, then click **Submit Entire Quiz** at the bottom!")
 
-    with st.form("sst_quiz_form"):
-        tabs = st.tabs([title for _, _, title in all_sections])
+    tabs = st.tabs([title for _, _, title in all_sections])
 
-        for i, (questions, prefix, title) in enumerate(all_sections):
-            with tabs[i]:
-                st.header(f"{title} Section ({len(questions)} Questions)")
-                for idx, item in enumerate(questions):
-                    st.subheader(f"Q{idx + 1}. {item['q']}")
-                    
-                    key_name = f"ans_{prefix}_{idx}"
-                    st.radio(
-                        label=f"q_{prefix}_{idx}",
-                        options=item["options"],
-                        key=key_name,
-                        index=None,
-                        label_visibility="collapsed"
-                    )
-                    st.divider()
+    for i, (questions, prefix, title) in enumerate(all_sections):
+        with tabs[i]:
+            st.header(f"{title} Section ({len(questions)} Questions)")
+            for idx, item in enumerate(questions):
+                st.subheader(f"Q{idx + 1}. {item['q']}")
+                
+                key_name = f"ans_{prefix}_{idx}"
+                st.radio(
+                    label=f"q_{prefix}_{idx}",
+                    options=item["options"],
+                    key=key_name,
+                    index=None,
+                    label_visibility="collapsed"
+                )
+                st.divider()
 
-        submitted = st.form_submit_button("Submit Entire Quiz 🚀")
-        if submitted:
-            st.session_state.quiz_submitted = True
-            st.rerun()
+    if st.button("Submit Entire Quiz 🚀", type="primary", use_container_width=True):
+        st.session_state.quiz_submitted = True
+        st.rerun()
 
 # ==========================================
 # RESULTS & DETAILED ANSWER KEY (POST-SUBMISSION)

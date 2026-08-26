@@ -9,16 +9,19 @@ except ImportError:
     HAS_AUTOREFRESH = False
 
 st.set_page_config(page_title="CBSE Class 10 SST Quiz", layout="wide")
-# Hide Streamlit main menu, header bar, and footer
+# Hide Streamlit main menu, header bar, footer, and developer badge
 hide_streamlit_style = """
     <style>
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
     [data-testid="stToolbar"] {visibility: hidden;}
+    [data-testid="stAppViewerOffer"] {display: none !important;}
+    .viewerBadge_container__1A12N {display: none !important;}
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 
 
 

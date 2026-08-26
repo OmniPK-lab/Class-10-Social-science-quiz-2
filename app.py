@@ -9,17 +9,35 @@ except ImportError:
     HAS_AUTOREFRESH = False
 
 st.set_page_config(page_title="CBSE Class 10 SST Quiz", layout="wide")
-# Hide Streamlit main menu, header bar, footer, and developer badge
+# Nuclear hide for Streamlit menus, footers, headers, and developer badges
 hide_streamlit_style = """
     <style>
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-    [data-testid="stToolbar"] {visibility: hidden;}
+    /* Hide top header & standard menu */
+    #MainMenu {visibility: hidden !important; display: none !important;}
+    header {visibility: hidden !important; display: none !important;}
+    footer {visibility: hidden !important; display: none !important;}
+    [data-testid="stHeader"] {visibility: hidden !important; display: none !important;}
+    [data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
+    
+    /* Hide bottom action buttons, manage app, viewer badges & crown icons */
     [data-testid="stAppViewerOffer"] {display: none !important;}
-    .viewerBadge_container__1A12N {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    div[class*="viewerBadge"] {display: none !important;}
+    div[class*="styles_viewerBadge"] {display: none !important;}
+    div[class*="stAppToolbar"] {display: none !important;}
+    div[class*="stActionButton"] {display: none !important;}
+    div[class*="manageApp"] {display: none !important;}
+    #stDecoration {display: none !important;}
+    
+    /* Target absolute bottom-right floating host elements */
+    iframe[title="streamlit_app"] {height: 100vh !important;}
+    .stApp > footer {display: none !important;}
+    div[style*="bottom: 0"] {display: none !important;}
     </style>
 """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 

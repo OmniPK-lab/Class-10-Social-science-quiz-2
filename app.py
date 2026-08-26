@@ -9,17 +9,23 @@ except ImportError:
     HAS_AUTOREFRESH = False
 
 st.set_page_config(page_title="CBSE Class 10 SST Quiz", layout="wide")
-# Nuclear hide for Streamlit menus, footers, headers, and developer badges
+####i have kept it here
+
+# Complete hide for menus, footers, badges, and the breakout fullscreen button
 hide_streamlit_style = """
     <style>
-    /* Hide top header & standard menu */
+    /* Hide top header & standard toolbar */
     #MainMenu {visibility: hidden !important; display: none !important;}
     header {visibility: hidden !important; display: none !important;}
     footer {visibility: hidden !important; display: none !important;}
     [data-testid="stHeader"] {visibility: hidden !important; display: none !important;}
     [data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
     
-    /* Hide bottom action buttons, manage app, viewer badges & crown icons */
+    /* Remove embed breakout fullscreen button */
+    button[title="View fullscreen"] {display: none !important;}
+    [data-testid="StyledFullScreenButton"] {display: none !important;}
+    
+    /* Hide bottom action buttons & viewer badges */
     [data-testid="stAppViewerOffer"] {display: none !important;}
     [data-testid="stDecoration"] {display: none !important;}
     [data-testid="stStatusWidget"] {display: none !important;}
@@ -29,13 +35,12 @@ hide_streamlit_style = """
     div[class*="stActionButton"] {display: none !important;}
     div[class*="manageApp"] {display: none !important;}
     #stDecoration {display: none !important;}
-    
-    /* Target absolute bottom-right floating host elements */
-    iframe[title="streamlit_app"] {height: 100vh !important;}
-    .stApp > footer {display: none !important;}
-    div[style*="bottom: 0"] {display: none !important;}
     </style>
 """
+####i have kept it here
+
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
